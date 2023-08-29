@@ -47,10 +47,10 @@ def getAssetList():
     base_url = getBaseResourceURL()
     res_url = base_url + '/MediaResources/MediaCatalog.json'
     res = requests.get(res_url).json()
-    for asset in res["Table"]:
-        if "spinecharacters-" in asset["Name"] or "spinelobbies-" in asset["Name"] or "spinebackground-" in asset["Name"]:
+    for asset in res["Table"].items():
+        if 2 != asset[1]["MediaType"]:
             # append url and path
-            data.append(base_url + '/MediaResources/' + asset["path"])
+            data.append(base_url + '/MediaResources/' + asset[1]["path"])
     return data
 
 
@@ -60,86 +60,30 @@ def downloadFile(url, fname):
         f.write(src)
 
 
-def extractTextAsset(object, dest):
-    # parse the object data
-    data = object.read()
-
-    # create destination path
-    dest = os.path.join(dest, data.name)
-
-    # touch folder
-    os.makedirs(os.path.dirname(dest), exist_ok=True)
-
-    # just save
-    with open(dest, "wb") as f:
-        f.write(data.script)
-
-
-def extractTexture2D(object, dest):
-    # parse the object data
-    data = object.read()
-
-    # create destination path
-    dest = os.path.join(dest, data.name)
-
-    # touch folder
-    os.makedirs(os.path.dirname(dest), exist_ok=True)
-
-    # make sure that the extension is correct
-    # you probably only want to do so with images/textures
-    dest, ext = os.path.splitext(dest)
-    dest = dest + ".png"
-
-    img = data.image
-    img.save(dest)
-
-
-def extractCharacter(src, dest):
-    # load the bundle
-    bundle = UnityPy.load(src)
-
-    for obj in bundle.objects:
-        # extract skel & atlas
-        if obj.type.name == "TextAsset":
-            data = obj.read()
-            if ".atlas" in data.name or ".skel" in data.name:
-                print(data.name)
-                extractTextAsset(obj, dest)
-        # extract texture
-        elif obj.type.name == "Texture2D":
-            data = obj.read()
-
-            print(data.name + ".png")
-            extractTexture2D(obj, dest)
-
-
 if __name__ == "__main__":
-    # make folder
-    if not (os.path.isdir("./downloaded_resource")):
-        os.makedirs("./downloaded_resource")
+    # make folders
     if not (os.path.isdir("./assets")):
         os.makedirs("./assets")
-    if not (os.path.isdir("./assets/spine")):
-        os.makedirs("./assets/spine")
-    if not (os.path.isdir("./data")):
-        os.makedirs("./data")
 
     # There are several ResourceURL to a version
     ver = getBaseResourceURL() + "/MediaResources/MediaCatalog.json"
     print(ver)
-    if (os.path.isfile("./data/version.txt")):
-        with open("./data/version.txt", "r") as f:
+    """
+        if (os.path.isfile("./version.txt")):
+        with open("./version.txt", "r") as f:
             ver_temp = f.read()
         if str(ver) == str(ver_temp):
             print(f"[{ver}] No new update. Stopping.")
             exit(1)
         else:
             print(f"Update {ver_temp} to {ver}")
-            with open("./data/version.txt", "w") as f:
+            with open("./version.txt", "w") as f:
                 f.write(ver)
     else:
-        with open("./data/version.txt", "w") as f:
+        with open("./version.txt", "w") as f:
             f.write(ver)
+
+    """
 
     # get asset list
     asset_list = getAssetList()
@@ -149,7 +93,7 @@ if __name__ == "__main__":
         print("="*30)
         print(f"{index}/{len(asset_list)}")
         fname = mediaFile.split("/")[-1]
-        destDownload = f"./downloaded_resource/{fname}"
+        destDownload = f"./assets/{mediaFile.split('MediaResources/')[1]}"
 
         print(fname)
 
@@ -158,22 +102,9 @@ if __name__ == "__main__":
             print("Already downloaded. Skipping.")
             continue
 
-        # spinebackground, spinecharacters and spinelobbies only
-        #character_name = ''.join(fname.split("spinecharacters-")[1].split("-")[0] if "spinecharacters" in fname else fname.split(
-        #    "spinelobbies-")[1].split("-")[0] if "spinelobbies" in fname else fname.split("spinebackground-")[1].split("-")[0])
-        # destExtract = f"./assets/spine/{character_name}"
 
-        # extract path and media type
-        file_name = ''.join(fname.split("spinecharacters-")[1].split("-")[0] if "spinecharacters" in fname else fname.split(
-            "spinelobbies-")[1].split("-")[0] if "spinelobbies" in fname else fname.split("spinebackground-")[1].split("-")[0])
-        destExtract = f"./assets/{file_name}"
-
-        # skip if already exists
-        if option["skipExistingAssets"] and os.path.isfile(destExtract):
-            print("Already extracted. Skipping.")
-            continue
-
-        if not (os.path.isdir(destExtract)):
-            os.makedirs(destExtract)
+        if not (os.path.isdir(destDownload.rsplit("/", 1)[0])):
+            os.makedirs(destDownload.rsplit("/", 1)[0])
 
         downloadFile(mediaFile, destDownload)
+
